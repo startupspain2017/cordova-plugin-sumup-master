@@ -81,7 +81,7 @@ import SumUpSDK;
 
     @objc(getSettings:)
     func getSettings(command: CDVInvokedUrlCommand) {
-        SumUpSDK.presentCheckoutPreferences(from: self.viewController, animated: true) { (success: Bool, error: Error?) in
+        SumUpSDK.presentCardReaderSettings(from: self.viewController, animated: true) { (success: Bool, error: Error?) in
             if(success) {
                 let obj = self.createReturnObject(code: self.SUCCESS, message: "Settings shown");
                 self.returnCordovaPluginResult(status: CDVCommandStatus_OK, obj: obj, command: command);

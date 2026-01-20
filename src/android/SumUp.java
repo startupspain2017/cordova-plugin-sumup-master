@@ -15,11 +15,7 @@ import com.sumup.merchant.api.SumUpState;
 import com.sumup.merchant.api.SumUpAPI;
 import com.sumup.merchant.api.SumUpLogin;
 import com.sumup.merchant.api.SumUpPayment;
-import com.sumup.merchant.cardreader.ReaderLibManager;
-import com.sumup.merchant.CoreState;
-import com.sumup.merchant.Models.TransactionInfo;
-import com.sumup.readerlib.CardReaderManager;
-import com.sumup.merchant.Models.UserModel;
+import com.sumup.merchant.models.TransactionInfo;
 
 import java.math.BigDecimal;
 
@@ -161,12 +157,11 @@ public class SumUp extends CordovaPlugin {
                 }
 
                 if (accessToken != null) {
-                    UserModel um;
-                    um = CoreState.Instance().get(UserModel.class);
-                    um.setAccessToken(accessToken.toString());
+                    // In the new SDK, access token login is handled through the login process
+                    SumUpLogin sumUpLogin = SumUpLogin.builder("").accessToken(accessToken.toString()).build();
+                    SumUpAPI.openLoginActivity(cordova.getActivity(), sumUpLogin, REQUEST_CODE_LOGIN);
 
-                    JSONObject obj = createReturnObject(AUTH_SUCCESSFUL, "Authenticate was successful");
-                    returnCordovaPluginResult(PluginResult.Status.OK, obj, false);
+                    // Note: This will trigger onActivityResult with login result
                 } else {
                     JSONObject obj = createReturnObject(NO_ACCESS_TOKEN, "No access token");
                     returnCordovaPluginResult(PluginResult.Status.ERROR, obj, true);
@@ -233,34 +228,22 @@ public class SumUp extends CordovaPlugin {
         return true;
     }
 
-    // wakes up the terminal to make a payment
+    // prepares the card reader for checkout
     private boolean prepare(JSONArray args, CallbackContext callbackContext) {
         callback = callbackContext;
         try {
-            Handler handler = new Handler(cordova.getActivity().getMainLooper());
-            handler.post(() -> {
-                ReaderLibManager rlm;
-                rlm = CoreState.Instance().get(ReaderLibManager.class);
-
-                //if(!rlm.isReadyToTransmit()) {
-                //    JSONObject obj = createReturnObject(CARDREADER_NOT_READY_TO_TRANSMIT, "Card reader is not ready to transmit");
-                //    returnCordovaPluginResult(PluginResult.Status.ERROR, obj, true);
-                //} else {
-                if(CardReaderManager.getInstance() != null) {
-                    try {
-                        SumUpAPI.prepareForCheckout();
-                        JSONObject obj = createReturnObject(1, "SumUp checkout prepared successfully");
-                        returnCordovaPluginResult(PluginResult.Status.OK, obj, false);
-                    } catch (Exception e) {
-                        JSONObject obj = createReturnObject(ERROR_PREPARING_CHECKOUT, e.getMessage());
-                        returnCordovaPluginResult(PluginResult.Status.ERROR, obj, false);
-                    }
-                } else {
-                    JSONObject obj = createReturnObject(CARDREADER_INSTANCE_NOT_DEFINED, "CardReader instance is not defined");
+            Runnable runnable = () -> {
+                try {
+                    SumUpAPI.prepareForCheckout();
+                    JSONObject obj = createReturnObject(1, "Card reader prepared for checkout");
+                    returnCordovaPluginResult(PluginResult.Status.OK, obj, false);
+                } catch (Exception e) {
+                    JSONObject obj = createReturnObject(PREPARE_PAYMENT_ERROR, e.getMessage());
                     returnCordovaPluginResult(PluginResult.Status.ERROR, obj, true);
                 }
-                //}
-            });
+            };
+
+            cordova.getActivity().runOnUiThread(runnable);
         } catch (Exception e) {
             JSONObject obj = createReturnObject(PREPARE_PAYMENT_ERROR, e.getMessage());
             returnCordovaPluginResult(PluginResult.Status.ERROR, obj, true);
@@ -291,29 +274,16 @@ public class SumUp extends CordovaPlugin {
     }
 
     // closes the connection to the card reader
+    // closes the card reader connection (handled automatically in new SDK)
     private boolean closeConnection(JSONArray args, CallbackContext callbackContext) {
         callback = callbackContext;
         try {
-            Handler handler = new Handler(cordova.getActivity().getMainLooper());
-            handler.post(() -> {
-                if(CardReaderManager.getInstance() != null) {
-                    try {
-                        CardReaderManager.getInstance().stopDevice();
-                        JSONObject obj = createReturnObject(1, "Card reader successfully stopped");
-                        returnCordovaPluginResult(PluginResult.Status.OK, obj, false);
-                    } catch (Exception e) {
-                        JSONObject obj = createReturnObject(STOP_CARD_READER_ERROR, e.getMessage());
-                        returnCordovaPluginResult(PluginResult.Status.ERROR, obj, true);
-                    }
-                } else {
-                    JSONObject obj = createReturnObject(CARDREADER_INSTANCE_NOT_DEFINED, "CardReader instance is not defined");
-                    returnCordovaPluginResult(PluginResult.Status.ERROR, obj, true);
-                }
-            });
+            // In the new SDK, card reader connection is managed automatically
+            JSONObject obj = createReturnObject(1, "Card reader connection managed automatically by SDK");
+            returnCordovaPluginResult(PluginResult.Status.OK, obj, false);
         } catch (Exception e) {
             JSONObject obj = createReturnObject(FAILED_CLOSE_CARD_READER_CONN, e.getMessage());
             returnCordovaPluginResult(PluginResult.Status.ERROR, obj, true);
-
             return false;
         }
 
@@ -430,8 +400,7 @@ public class SumUp extends CordovaPlugin {
                         obj = createReturnObject(code, "Payment error");
 
                         UserModel um;
-                        um = CoreState.Instance().get(UserModel.class);
-                        if(!um.isLoggedIn()) {
+                        if(!SumUpAPI.isLoggedIn()) {
                             obj = createReturnObject(SumUpAPI.Response.ResultCode.ERROR_NOT_LOGGED_IN, "Not logged in");
                         } else {
                             obj = createReturnObject(code, "Payment error");

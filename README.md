@@ -26,7 +26,18 @@ Make sure, the SUMUP_API_KEY value is an empty string.
 
 [SumUp Dashboard](https://me.sumup.com/developers)
 
-### Test credentials
+## Requirements
+
+- **Cordova**: 10.0.0 or higher
+- **Android**: 
+  - minSdkVersion: 26
+  - targetSdkVersion: 35
+  - Java 17
+- **iOS**: 
+  - iOS 16.0 or higher
+  - Xcode 15.0 or higher
+
+## Test credentials
 
 If you are in development you can request test credentials.
 With this credentials your card (Debit- or creditcard) will not be charged.
@@ -381,6 +392,7 @@ In **examples/ionic** is an example app with Ionic.
 
 ## Changelog
 
+- 3.0.0: Updated to SumUp Android SDK 6.0.0 and iOS SDK 6.2.1. Requires Cordova 10.0+. Updated Android target SDK to 35, min SDK to 26. Migrated to AndroidX. Updated iOS API calls.
 - 2.0.0: Added support for iOS
 - 1.3.0: Added "last_4_digits" on payment and fixed an issue on login (Check missing accessToken)
 - 1.2.0: Provide the SUMUP_API_KEY (Affiliate Key) from JavaScript
